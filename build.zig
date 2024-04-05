@@ -5,7 +5,7 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const static = b.option(bool, "static", "build a static liblo") orelse false;
 
-    const module = b.addModule("liblo", .{
+    const module = b.addModule("ziglo", .{
         .target = target,
         .optimize = optimize,
         .root_source_file = .{ .path = "main.zig" },
@@ -23,7 +23,7 @@ pub fn build(b: *std.Build) !void {
         module.linkLibrary(lib);
         tests.linkLibrary(lib);
     } else {
-        module.linkSystemLibrary("libl", .{ .needed = true });
+        module.linkSystemLibrary("liblo", .{ .needed = true });
         tests.linkSystemLibrary("liblo");
     }
 
