@@ -28,15 +28,15 @@ and in your source code:
 const ziglo = @import("ziglo");
 
 // and use it something like this...
-var server = ziglo.Server.new(null, null) orelse return error.Failed;
+const server = ziglo.Server.new(null, null) orelse return error.Failed;
 defer server.free();
 // can hold onto the opaque pointer returned if you want to later remove this method.
 _ = server.addMethod("/an/osc/path", null, wrap(anOscMethodHandler), null) orelse return error.Failed;
 
-var target = ziglo.Address.new("localhost", "7777") orelse return error.Failed;
+const target = ziglo.Address.new("localhost", "7777") orelse return error.Failed;
 defer target.free();
 
-var msg = ziglo.Message.new() orelse return error.Failed;
+const msg = ziglo.Message.new() orelse return error.Failed;
 defer msg.free();
 msg.add(.{ 4, 4.5, "a string", .nil, .infinity, null, true, false });
 
