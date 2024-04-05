@@ -24,6 +24,30 @@ pub const Message = opaque {
         return @ptrCast(c.lo_message_new());
     }
 
+    /// deserialise a message from a slice of bytes
+    /// destroy the returned message with `free`.
+    pub fn deserialise(bytes: []u8) Err!*Message {
+        const ptr = c.lo_message_deserialise(bytes.ptr, bytes.len, null) orelse return error.LibloFailure;
+        return @ptrCast(ptr);
+    }
+
+    /// allocate an appropriately-sized buffer and serialize the message into it
+    pub fn serialiseAlloc(self: *Message, path: [*:0]const u8, allocator: std.mem.Allocator) (error{OutOfMemory} || Err)![]u8 {
+        const len = self.length(path);
+        const bytes = try allocator.alloc(u8, len);
+        errdefer allocator.free(bytes);
+        _ = c.lo_message_serialise(@ptrCast(self), path, bytes.ptr, null) orelse return error.LibloFailure;
+        return bytes;
+    }
+
+    /// serialize message into a buffer
+    /// returns a slice from `buf` representing the message
+    pub fn serialise(self: *Message, path: [*:0]const u8, buf: []u8) Err![]u8 {
+        var size = buf.len;
+        const ptr: [*]u8 = @ptrCast(c.lo_message_serialise(@ptrCast(self), path, buf.ptr, &size) orelse return error.LibloFailure);
+        return ptr[0..size];
+    }
+
     /// destroys a message created with `new`.
     pub fn free(self: *Message) void {
         c.lo_message_free(@ptrCast(self));
@@ -219,7 +243,7 @@ pub const Address = opaque {
     }
 
     test Address {
-        var addr = Address.new("localhost", "0001").?;
+        const addr = Address.new("localhost", "0001").?;
         defer addr.free();
         try std.testing.expectEqualStrings("localhost", std.mem.sliceTo(addr.getHostname().?, 0));
         try std.testing.expectEqualStrings("0001", std.mem.sliceTo(addr.getPort().?, 0));
@@ -341,16 +365,38 @@ pub const Server = opaque {
         return c.lo_server_del_lo_method(@ptrCast(self), @ptrCast(method)) == 0;
     }
 
+    /// returns the port number of the server.
+    pub fn getPort(self: *Server) Err!u32 {
+        const port = c.lo_server_get_port(@ptrCast(self));
+        try unwrap(port);
+        return @intCast(port);
+    }
+
+    /// pushes a byte buffer representing a message to the server as if it had received it
+    pub fn dispatchData(self: *Server, data: []u8) Err!void {
+        try unwrap(c.lo_server_dispatch_data(@ptrCast(self), data.ptr, data.len));
+    }
+
     test Server {
         std.testing.refAllDecls(Server);
-        var server = Server.new(null, null).?;
+        const server = Server.new(null, null).?;
+        _ = try server.getPort();
         defer server.free();
-        const no_op_str = struct {
-            fn no_op(_: [:0]const u8, _: []const u8, _: *Message, _: ?*anyopaque) bool {
+        const inner = struct {
+            fn setTo13(_: [:0]const u8, _: []const u8, _: *Message, data: ?*anyopaque) bool {
+                const ptr: *usize = @ptrCast(@alignCast(data orelse return true));
+                ptr.* = 13;
                 return false;
             }
         };
-        const method = server.addMethod(null, null, wrap(no_op_str.no_op), null).?;
+        var test_val: usize = 0;
+        const method = server.addMethod(null, null, wrap(inner.setTo13), &test_val).?;
+        const msg = Message.new().?;
+        defer msg.free();
+        const bytes = try msg.serialiseAlloc("/test/path", std.testing.allocator);
+        defer std.testing.allocator.free(bytes);
+        try server.dispatchData(bytes);
+        try std.testing.expectEqual(13, test_val);
         try std.testing.expect(server.deleteMethod(method));
     }
 };
@@ -378,14 +424,14 @@ pub const Blob = opaque {
     }
 
     test Blob {
-        var blob = Blob.new("467").?;
+        const blob = Blob.new("467").?;
         defer blob.free();
         try std.testing.expectEqualStrings("467", blob.data().?);
     }
 };
 
 test "message new" {
-    var msg = Message.new().?;
+    const msg = Message.new().?;
     defer msg.free();
     try msg.add(.{ 4, 4.5, "hey, hi, hello!", .infinity, .nil, null, false, true });
     try std.testing.expectEqualStrings("ifsINNFT", std.mem.sliceTo(msg.types().?, 0));
