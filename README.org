@@ -1,0 +1,44 @@
+* ziglo
+
+=ziglo= is a Zig interface to [[https://github.com/radarsat1/liblo][liblo]], an implementation of the [[https://opensoundcontrol.stanford.edu][Open Sound Control]] protocol. =ziglo= provides Zig types for =liblo= primitives and convenience functions for adding and querying message contents leveraging Zig's comptime.
+
+To add this package to your project, pick a commit hash =<hash>= and run this:
+
+#+begin_src bash
+$ zig fetch --save https://github.com/ryleelyman/ziglo/archive/<hash>.tar.gz
+#+end_src
+
+Then in your =build.zig= you can add this:
+
+#+begin_src zig
+const ziglo = b.dependency("ziglo", .{
+    .target = target,
+    .optimize = optimize,
+    .static = true, // builds a static liblo; defaults to false
+});
+
+// For whatever you're building; in this case let's assume it's called exe.
+exe.root_module.addImport("ziglo", ziglo.module("ziglo"));
+#+end_src
+
+and in your source code:
+
+#+begin_src zig
+// import
+const ziglo = @import("ziglo");
+
+// and use it something like this...
+var server = ziglo.Server.new(null, null) orelse return error.Failed;
+defer server.free();
+// can hold onto the opaque pointer returned if you want to later remove this method.
+_ = server.addMethod("/an/osc/path", null, wrap(anOscMethodHandler), null) orelse return error.Failed;
+
+var target = ziglo.Address.new("localhost", "7777") orelse return error.Failed;
+defer target.free();
+
+var msg = ziglo.Message.new() orelse return error.Failed;
+defer msg.free();
+msg.add(.{ 4, 4.5, "a string", .nil, .infinity, null, true, false });
+
+try server.send(target, "/another/osc/path", msg);
+#+end_src
