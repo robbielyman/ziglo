@@ -1,5 +1,5 @@
 .{
-    .name = "liblo",
+    .name = "ziglo",
     .version = "0.31.0",
     .paths = .{
         "build.zig",
