@@ -181,7 +181,7 @@ pub const Message = opaque {
                 const arg = args[index] orelse return error.LibloFailure;
                 if (kind != 's' and kind != 'S') {
                     if (kind != 'b') return error.BadType;
-                    const blob: *Blob = @ptrCast(arg.blob);
+                    const blob: *Blob = @ptrCast(&arg.blob);
                     return blob.data() orelse return error.LibloFailure;
                 } else {
                     const ptr: [*:0]const u8 = @ptrCast(if (kind == 'S') &arg.S else &arg.s);
