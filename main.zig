@@ -14,6 +14,11 @@ pub fn sendMessage(target: *Address, path: [*:0]const u8, msg: *Message) Err!voi
     try unwrap(c.lo_send_message(@ptrCast(target), path, @ptrCast(msg)));
 }
 
+/// returns `true` on a match
+pub fn patternMatch(string: [*:0]const u8, against: [*:0]const u8) bool {
+    return c.lo_pattern_match(string, against) != 0;
+}
+
 inline fn unwrap(err: c_int) Err!void {
     if (err < 0) return error.LibloFailure;
 }
@@ -22,6 +27,12 @@ pub const Message = opaque {
     /// creates a new message; destroy with `free`.
     pub fn new() ?*Message {
         return @ptrCast(c.lo_message_new());
+    }
+
+    /// adds one to the reference count of this message
+    /// decrement with `free`.
+    pub fn incRef(self: *Message) void {
+        c.lo_message_incref(@ptrCast(self));
     }
 
     /// deserialise a message from a slice of bytes
@@ -156,7 +167,7 @@ pub const Message = opaque {
                 }
                 return @ptrCast(&arg.s);
             },
-            [:0]const u8, []const u8 => {
+            [:0]const u8 => {
                 const arg = args[index] orelse return error.LibloFailure;
                 if (kind != 's') {
                     if (kind != 'S') return error.BadType;
@@ -166,10 +177,26 @@ pub const Message = opaque {
                 const ptr: [*:0]const u8 = @ptrCast(&arg.s);
                 return std.mem.sliceTo(ptr, 0);
             },
+            []const u8 => {
+                const arg = args[index] orelse return error.LibloFailure;
+                if (kind != 's' and kind != 'S') {
+                    if (kind != 'b') return error.BadType;
+                    const blob: *Blob = @ptrCast(arg.blob);
+                    return blob.data() orelse return error.LibloFailure;
+                } else {
+                    const ptr: [*:0]const u8 = @ptrCast(if (kind == 'S') &arg.S else &arg.s);
+                    return std.mem.sliceTo(ptr, 0);
+                }
+            },
             [4]u8 => {
                 const arg = args[index] orelse return error.LibloFailure;
                 if (kind != 'm') return error.BadType;
                 return arg.m;
+            },
+            u8 => {
+                const arg = args[index] orelse return error.LibloFailure;
+                if (kind != 'c') return error.BadType;
+                return arg.c;
             },
             LoType => {
                 if (kind != 'N') {
