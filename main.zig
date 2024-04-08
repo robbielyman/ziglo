@@ -69,6 +69,43 @@ pub const Message = opaque {
         return @ptrCast(c.lo_message_clone(@ptrCast(other)));
     }
 
+    /// add a slice of one or more arguments to the message
+    pub fn addSlice(self: *Message, comptime T: type, args: []const T) Err!void {
+        for (0..args.len) |i| {
+            switch (T) {
+                i32 => try unwrap(c.lo_message_add_int32(@ptrCast(self), args[i])),
+                i64 => try unwrap(c.lo_message_add_int64(@ptrCast(self), args[i])),
+                f32 => try unwrap(c.lo_message_add_float(@ptrCast(self), args[i])),
+                f64 => try unwrap(c.lo_message_add_double(@ptrCast(self), args[i])),
+                [:0]u8, [:0]const u8 => try unwrap(c.lo_message_add_string(@ptrCast(self), args[i].ptr)),
+                [*:0]u8, [*:0]const u8 => try unwrap(c.lo_message_add_string(@ptrCast(self), args[i])),
+                Blob => try unwrap(c.lo_message_add_blob(@ptrCast(self), args[i])),
+                u8 => try unwrap(c.lo_message_add_char(@ptrCast(self), args[i])),
+                bool => if (args[i]) try unwrap(c.lo_message_add_true(@ptrCast(self))) else try unwrap(c.lo_message_add_false(@ptrCast(self))),
+                [4]u8 => try unwrap(c.lo_message_add_midi(@ptrCast(self), &args[i])),
+                LoType => switch (args[i]) {
+                    .infinity => try unwrap(c.lo_message_add_infinitum(@ptrCast(self))),
+                    .nil => try unwrap(c.lo_message_add_nil(@ptrCast(self))),
+                },
+                @TypeOf(null) => try unwrap(c.lo_message_add_nil(@ptrCast(self))),
+                comptime_int => {
+                    const as_i32: i32 = @intCast(args[i]);
+                    try unwrap(c.lo_message_add_int32(@ptrCast(self), as_i32));
+                },
+                comptime_float => {
+                    const as_f32: f32 = @floatCast(args[i]);
+                    try unwrap(c.lo_message_add_float(@ptrCast(self), as_f32));
+                },
+                @TypeOf(.enum_literal) => {
+                    if (args[i] == .infinity) try unwrap(c.lo_message_add_infinitum(@ptrCast(self)));
+                    if (args[i] == .nil) try unwrap(c.lo_message_add_nil(@ptrCast(self)));
+                    if (args[i] != .infinity and args[i] != .nil) @compileError("Message.add called with unexpected enum literal: " ++ @tagName(args[i]) ++ "!");
+                },
+                else => @compileError("Message.add called with unsupported type: '" ++ @typeName(arg.type) ++ "'!"),
+            }
+        }
+    }
+
     /// add a tuple of one or more arguments to the message
     /// will attempt to add integer and float literals as i32 and f32, respectively
     pub fn add(self: *Message, args: anytype) Err!void {
