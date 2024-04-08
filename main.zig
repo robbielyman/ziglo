@@ -101,7 +101,7 @@ pub const Message = opaque {
                     if (args[i] == .nil) try unwrap(c.lo_message_add_nil(@ptrCast(self)));
                     if (args[i] != .infinity and args[i] != .nil) @compileError("Message.add called with unexpected enum literal: " ++ @tagName(args[i]) ++ "!");
                 },
-                else => @compileError("Message.add called with unsupported type: '" ++ @typeName(arg.type) ++ "'!"),
+                else => @compileError("Message.add called with unsupported type: '" ++ @typeName(T) ++ "'!"),
             }
         }
     }
