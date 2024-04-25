@@ -49,21 +49,21 @@ fn compileLibLo(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.b
         .include_path = "config.h",
     }, config_values);
     lib.addConfigHeader(config);
-    lib.installConfigHeader(config, .{});
+    lib.installConfigHeader(config);
 
     const lo = b.addConfigHeader(.{
         .style = .{ .cmake = upstream.path("lo/lo.h.in") },
         .include_path = "lo/lo.h",
     }, .{ .THREADS_INCLUDE = "#include \"lo/lo_serverthread.h\"" });
     lib.addConfigHeader(lo);
-    lib.installConfigHeader(lo, .{});
+    lib.installConfigHeader(lo);
 
     const lo_endian = b.addConfigHeader(.{
         .style = .{ .cmake = upstream.path("lo/lo_endian.h.in") },
         .include_path = "lo/lo_endian.h",
     }, .{ .LO_BIGENDIAN = 2 });
     lib.addConfigHeader(lo_endian);
-    lib.installConfigHeader(lo_endian, .{});
+    lib.installConfigHeader(lo_endian);
 
     lib.addIncludePath(upstream.path("."));
     lib.addIncludePath(upstream.path("src"));
@@ -73,11 +73,7 @@ fn compileLibLo(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.b
         .files = &library_sources,
         .flags = &.{ "-std=c11", "-g", "-Qunused-arguments" },
     });
-    lib.installHeadersDirectoryOptions(.{
-        .source_dir = upstream.path("lo"),
-        .install_dir = .header,
-        .install_subdir = "lo",
-    });
+    lib.installHeadersDirectory(upstream.path("lo"), "lo", .{});
 
     return lib;
 }
