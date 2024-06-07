@@ -8,10 +8,10 @@ pub fn build(b: *std.Build) !void {
     const module = b.addModule("ziglo", .{
         .target = target,
         .optimize = optimize,
-        .root_source_file = .{ .path = "main.zig" },
+        .root_source_file = b.path("main.zig"),
     });
     const tests = b.addTest(.{
-        .root_source_file = .{ .path = "main.zig" },
+        .root_source_file = b.path("main.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = true,
