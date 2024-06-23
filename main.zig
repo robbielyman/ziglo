@@ -82,7 +82,11 @@ pub const Message = opaque {
                 Blob => try unwrap(c.lo_message_add_blob(@ptrCast(self), args[i])),
                 u8 => try unwrap(c.lo_message_add_char(@ptrCast(self), args[i])),
                 bool => if (args[i]) try unwrap(c.lo_message_add_true(@ptrCast(self))) else try unwrap(c.lo_message_add_false(@ptrCast(self))),
-                [4]u8 => try unwrap(c.lo_message_add_midi(@ptrCast(self), &args[i])),
+                [4]u8 => {
+                    var midi: [4]u8 = undefined;
+                    @memcpy(&midi, &args[i]);
+                    try unwrap(c.lo_message_add_midi(@ptrCast(self), &midi));
+                },
                 LoType => switch (args[i]) {
                     .infinity => try unwrap(c.lo_message_add_infinitum(@ptrCast(self))),
                     .nil => try unwrap(c.lo_message_add_nil(@ptrCast(self))),
@@ -135,7 +139,11 @@ pub const Message = opaque {
                 Blob => try unwrap(c.lo_message_add_blob(@ptrCast(self), args[i])),
                 u8 => try unwrap(c.lo_message_add_char(@ptrCast(self), args[i])),
                 bool => if (args[i]) try unwrap(c.lo_message_add_true(@ptrCast(self))) else try unwrap(c.lo_message_add_false(@ptrCast(self))),
-                [4]u8 => try unwrap(c.lo_message_add_midi(@ptrCast(self), &args[i])),
+                [4]u8 => {
+                    var midi: [4]u8 = undefined;
+                    @memcpy(&midi, &args[i]);
+                    try unwrap(c.lo_message_add_midi(@ptrCast(self), &midi));
+                },
                 LoType => switch (args[i]) {
                     .infinity => try unwrap(c.lo_message_add_infinitum(@ptrCast(self))),
                     .nil => try unwrap(c.lo_message_add_nil(@ptrCast(self))),
